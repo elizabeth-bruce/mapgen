@@ -1,0 +1,54 @@
+name:                mapgen
+version:             0.0.1.0
+github:              "elizabeth-bruce/mapgen"
+license:             BSD3
+author:              "Elizabeth Bruce"
+maintainer:          "elizabeth.bruce.dev@gmail.com"
+copyright:           "2019-2020 Elizabeth Bruce"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/elizabeth-bruce/mapgen#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- random
+- split
+- lens
+- normaldistribution ==1.1.0.3
+- fft
+- array
+- carray
+
+library:
+  source-dirs: src
+executables:
+  mapgen-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - mapgen
+
+tests:
+  mapgen-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - mapgen
