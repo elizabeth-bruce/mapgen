@@ -1,12 +1,15 @@
 module MapGen.Data.GridBuilder (
-  createGrid
+  createGrid,
+  createGridWithForest
 ) where
 
+import Debug.Trace (trace)
+
 import qualified Data.Array.CArray as CArray (CArray (..), array, indices, elems, bounds, ixmapWithInd, ixmap)
-import qualified Data.Array as Array (Array (..), array)
+import qualified Data.Array as Array (Array (..), array, bounds, assocs, elems)
 
 import Math.FFT (dct2N, dct3N)
-import System.Random (RandomGen)
+import System.Random (RandomGen, split, random, randoms)
 import Data.Random.Normal (normals)
 
 import MapGen.Models.Terrain (Terrain (..))
@@ -65,3 +68,23 @@ transformNoiseGridToGrid noiseGrid =
 createGrid :: (RandomGen g) => g -> Int -> Int -> Grid
 
 createGrid gen width height = transformNoiseGridToGrid $ createFilteredNoiseGrid gen width height
+
+seedGridWithForest :: (RandomGen g) => g -> Grid -> Grid
+
+seedGridWithForest gen grid =
+  let bounds@(_,(width, height)) = Array.bounds grid
+      mapSize = (width + 1) * (height + 1)
+      probVals = take mapSize $ randoms gen :: [Float]
+      assocs = map (\(prob, gridVal) -> seedTileWithForest prob gridVal) $ zip probVals $ Array.assocs grid
+  in Array.array bounds assocs
+
+seedTileWithForest :: Float -> ((Int, Int), Tile) -> ((Int, Int), Tile)
+
+seedTileWithForest probability original@((x, y), tile) =
+  if terrain tile == Plains && (probability < 0.01)
+  then ((x, y), Tile{terrain=Forest})
+  else original
+
+createGridWithForest gen width height =
+  let grid = createGrid gen width height
+  in seedGridWithForest gen grid

@@ -1,5 +1,8 @@
 # Changelog for mapgen
 
+### 0.0.3.0
+* Generating random maps will now produce forests on the map.
+
 ### 0.0.2.0
 * Added functionality to pass in width and height parameters via the command line.
 * Updated README.md documentation.
