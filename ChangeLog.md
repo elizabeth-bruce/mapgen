@@ -1,5 +1,9 @@
 # Changelog for mapgen
 
+### 0.0.5.0
+* Generating random maps will now produce aeries on the map in areas of high elevation.
+* Forest growth is now dependent on temperature of the area.
+
 ### 0.0.3.0
 * Generating random maps will now produce forests on the map.
 

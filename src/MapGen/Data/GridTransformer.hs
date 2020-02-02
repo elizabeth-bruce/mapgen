@@ -12,31 +12,36 @@ import MapGen.Models.Terrain (Terrain (..))
 import MapGen.Models.Tile (Tile (..))
 import MapGen.Models.Grid (Grid (..))
 
+import qualified MapGen.Data.Config as Config (FeatureConfig (..), getFeatureConfigs)
+
 advanceGridTicks :: (RandomGen a) => Int -> Grid -> Rand a Grid
 advanceGridTicks 1 grid = advanceGridTick grid
 advanceGridTicks i grid = advanceGridTicks (i - 1) grid >>= advanceGridTick
 
 advanceGridTick :: (RandomGen a) => Grid -> Rand a Grid
-advanceGridTick = spreadForests
+advanceGridTick = spreadFeatures Config.getFeatureConfigs
 
-spreadForests :: (RandomGen a) => Grid -> Rand a Grid
+spreadFeatures :: (RandomGen a) => [Config.FeatureConfig] -> Grid -> Rand a Grid
+spreadFeatures [] grid = return grid
+spreadFeatures (feature:otherFeatures) grid = spreadFeature feature grid >>= spreadFeatures otherFeatures
 
-spreadForests grid = do
+spreadFeature :: (RandomGen a) => Config.FeatureConfig -> Grid -> Rand a Grid
+spreadFeature featureConfig grid = do
   let bounds = Array.bounds grid
-  assocs <- mapM (spreadForest grid) (Array.assocs grid)
-  return $ Array.array bounds assocs 
+  assocs <- mapM (spreadFeatureTile featureConfig grid) (Array.assocs grid)
+  return $ Array.array bounds assocs
 
-spreadForest :: (RandomGen g) => Grid -> ((Int, Int), Tile) -> Rand g ((Int, Int), Tile)
-
-spreadForest grid gridVal@(coords, tile) = do
+spreadFeatureTile :: (RandomGen a) => Config.FeatureConfig -> Grid -> ((Int, Int), Tile) -> Rand a ((Int, Int), Tile)
+spreadFeatureTile featureConfig grid gridVal@(coords, tile) = do
   let adjacentTiles = getAdjacentTiles grid gridVal
-  spread <- shouldForestSpread tile adjacentTiles
-  let nextTileVal = 
+      nextTerrain = Config.terrain featureConfig
+  spread <- shouldFeatureSpread featureConfig tile adjacentTiles
+  let nextTile =
         if spread
-        then Tile{ temperature=temperature tile, terrain=Forest }
+        then Tile{ height=height tile, temperature=temperature tile, terrain=nextTerrain }
         else tile
-  return (coords, nextTileVal)
-   
+  return (coords, nextTile)
+
 getAdjacentTiles :: Grid -> ((Int, Int), Tile) -> [Tile]
 
 getAdjacentTiles grid ((x, y), _) =
@@ -59,8 +64,12 @@ getAdjacentTiles grid ((x, y), _) =
         else [grid Array.! (x, y + 1)]
   in left ++ right ++ top ++ bottom
 
-shouldForestSpread :: (RandomGen g) => Tile -> [Tile] -> Rand g Bool
-
-shouldForestSpread currentTile adjacentTiles = do
+shouldFeatureSpread :: (RandomGen g) => Config.FeatureConfig -> Tile -> [Tile] -> Rand g Bool
+shouldFeatureSpread featureConfig currentTile adjacentTiles = do
   p <- getRandom
-  return (terrain currentTile == Plains && any (\tile -> terrain tile == Forest) adjacentTiles && p < (0.2 :: Float))
+  let currentTemp = temperature currentTile
+      (_, pSpread) = Config.pGrowth featureConfig
+      (minTemp, maxTemp) = Config.temperature featureConfig
+      spreadTerrain = (Config.terrain featureConfig)
+      adjacentTile = any (\tile -> terrain tile == spreadTerrain) adjacentTiles
+  return (adjacentTile && p < pSpread && currentTemp > minTemp && currentTemp < maxTemp)

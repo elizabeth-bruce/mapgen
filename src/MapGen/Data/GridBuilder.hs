@@ -1,8 +1,6 @@
 module MapGen.Data.GridBuilder (
   createGrid,
-  createGridWithForest,
-  seedGridWithForest,
-  seedTileWithForest
+  createGridWithForest
 ) where
 
 import Debug.Trace (trace)
@@ -22,6 +20,8 @@ import MapGen.Models.Terrain (Terrain (..))
 import MapGen.Models.Tile (Tile (..))
 import MapGen.Models.Grid (Grid (..))
 
+import qualified MapGen.Data.Config as Config (FeatureConfig (..), getFeatureConfigs)
+
 getNormal :: (RandomGen g, Random a, Floating a) => Rand g a
 getNormal = liftRand normal
 
@@ -29,6 +29,7 @@ getNormals :: (RandomGen g, Random a, Floating a) => Rand g [a]
 getNormals = liftRand $ first normals . split
 
 type NoiseGrid = CArray.CArray (Int, Int) Float
+type HeightGrid = CArray.CArray (Int, Int) Float
 type TemperatureGrid = Array.Array (Int, Int) Float
 
 createTemperatureGrid :: RandomGen g => Int -> Int -> Rand g TemperatureGrid
@@ -61,43 +62,57 @@ filterFTNoiseGrid grid =
 iftNoiseGrid :: NoiseGrid -> NoiseGrid
 iftNoiseGrid = dct3N [0,1]
 
-createFilteredNoiseGrid :: RandomGen g => Int -> Int -> Rand g NoiseGrid
-createFilteredNoiseGrid = (((iftNoiseGrid . filterFTNoiseGrid . ftNoiseGrid) <$>) .) . createNoiseGrid
+createHeightGrid :: RandomGen g => Int -> Int -> Rand g HeightGrid
+createHeightGrid = (((iftNoiseGrid . filterFTNoiseGrid . ftNoiseGrid) <$>) .) . createNoiseGrid
 
-transformNoiseValToTerrain :: Float -> Terrain
-transformNoiseValToTerrain val
-  | val < -50 = Ocean
-  | val < 0 = Shallows
-  | val < 100 = Plains
-  | val < 200 = Hills
-  | val < 300 = Mountains
+transformHeightToTerrain :: Float -> Terrain
+transformHeightToTerrain height
+  | height < -50 = Ocean
+  | height < 0 = Shallows
+  | height < 100 = Plains
+  | height < 200 = Hills
+  | height < 300 = Mountains
   | otherwise = Peaks
 
 createTile :: Float -> Float -> Tile
-createTile noiseVal temperatureVal = Tile{ 
-  terrain = transformNoiseValToTerrain noiseVal
-  ,temperature = temperatureVal
+createTile height temperature = Tile{
+  height=height
+  ,terrain=transformHeightToTerrain height
+  ,temperature=temperature
 }
  
 createGrid :: RandomGen g => Int -> Int -> Rand g Grid
 createGrid width height = do
   temperatureVals <- Array.elems <$> createTemperatureGrid width height
-  noiseVals <- CArray.elems <$> createFilteredNoiseGrid width height
+  heightVals <- CArray.elems <$> createHeightGrid width height
   let bounds = ((0, 0), (width - 1, height - 1))
-      gridVals = zipWith createTile noiseVals temperatureVals
+      gridVals = zipWith createTile heightVals temperatureVals
   return $ Array.listArray bounds gridVals
 
-seedTileWithForest :: (RandomGen g) => ((Int, Int), Tile) -> Rand g ((Int, Int), Tile)
-seedTileWithForest original@((x, y), tile) = do
+seedTileWithFeature :: (RandomGen g) => Config.FeatureConfig -> Tile -> Rand g Tile
+
+seedTileWithFeature featureConfig tile = do
   p <- getRandomR (0.0 :: Float, 1.0 :: Float)
-  let nextTile = if terrain tile == Plains && (p < 0.01) then ((x, y), Tile{temperature=temperature tile, terrain=Forest}) else original
+  let temp = temperature tile
+      h = height tile
+      (tempMin, tempMax) = Config.temperature featureConfig
+      (heightMin, heightMax) = Config.height featureConfig
+      (pSeed, _) = Config.pGrowth featureConfig
+      destinationTerrain = Config.terrain featureConfig
+      nextTile = if p < pSeed && temp > tempMin && temp < tempMax && h > heightMin && h < heightMax
+                 then Tile{height=h, temperature=temp, terrain=destinationTerrain}
+                 else tile
   return nextTile
 
-seedGridWithForest :: (RandomGen g) => Grid -> Rand g Grid
-seedGridWithForest grid = do
-  assocs <- mapM seedTileWithForest (Array.assocs grid)
+seedGridWithFeature :: (RandomGen g) => Config.FeatureConfig -> Grid -> Rand g Grid
+seedGridWithFeature featureConfig grid = do
+  elems <- mapM (seedTileWithFeature featureConfig) (Array.elems grid)
   let bounds = Array.bounds grid
-  return $ Array.array bounds assocs
+  return $ Array.listArray bounds elems
+
+seedGridWithFeatures :: (RandomGen g) => [Config.FeatureConfig] -> Grid -> Rand g Grid
+seedGridWithFeatures [] grid = return grid
+seedGridWithFeatures (feature:otherFeatures) grid = seedGridWithFeature feature grid >>= seedGridWithFeatures otherFeatures
 
 createGridWithForest :: (RandomGen g) => Int -> Int -> Rand g Grid
-createGridWithForest width height = createGrid width height >>= seedGridWithForest
+createGridWithForest width height = createGrid width height >>= seedGridWithFeatures Config.getFeatureConfigs

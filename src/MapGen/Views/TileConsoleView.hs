@@ -13,3 +13,4 @@ renderTile tile = case terrain tile of
   Hills -> "\x1b[32;1mᴖ"
   Mountains -> "\x1b[31;1m▲"
   Peaks -> "\x1b[30;1m▲"
+  Aerie -> "\x1b[35m▲"
