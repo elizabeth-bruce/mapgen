@@ -4,4 +4,4 @@ module MapGen.Models.Map (
 
 import MapGen.Models.Grid (Grid (..))
 
-data Map = Map { grid :: Grid } deriving (Show, Eq)
+newtype Map = Map { grid :: Grid } deriving (Show, Eq)

@@ -10,4 +10,4 @@ instance Random Terrain where
   randomR (lo, hi) g =
     case randomR (fromEnum lo, fromEnum hi) g of
     (val, g') -> (toEnum val, g')
-  random g = randomR (minBound, maxBound) g
+  random = randomR (minBound, maxBound)

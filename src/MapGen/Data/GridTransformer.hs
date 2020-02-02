@@ -23,7 +23,7 @@ spreadForests :: (RandomGen a) => Grid -> Rand a Grid
 
 spreadForests grid = do
   let bounds = Array.bounds grid
-  assocs <- sequence $ map (spreadForest grid) $ Array.assocs grid
+  assocs <- mapM (spreadForest grid) (Array.assocs grid)
   return $ Array.array bounds assocs 
 
 spreadForest :: (RandomGen g) => Grid -> ((Int, Int), Tile) -> Rand g ((Int, Int), Tile)
@@ -33,7 +33,7 @@ spreadForest grid gridVal@(coords, tile) = do
   spread <- shouldForestSpread tile adjacentTiles
   let nextTileVal = 
         if spread
-        then Tile{ terrain=Forest }
+        then Tile{ temperature=temperature tile, terrain=Forest }
         else tile
   return (coords, nextTileVal)
    
