@@ -7,19 +7,23 @@ import qualified Data.Array as Array (Array (..), array, (!), bounds, assocs, el
 
 import System.Random (RandomGen, split, random, randoms)
 import Control.Monad.Random (Rand (..), Random (..), getRandom)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Reader (ReaderT, ask)
 
 import MapGen.Models.Terrain (Terrain (..))
 import MapGen.Models.Tile (Tile (..))
 import MapGen.Models.Grid (Grid (..))
 
-import qualified MapGen.Data.Config as Config (FeatureConfig (..), getFeatureConfigs)
+import qualified MapGen.Data.Config as Config (Config, FeatureConfig (..))
 
-advanceGridTicks :: (RandomGen a) => Int -> Grid -> Rand a Grid
+advanceGridTicks :: (RandomGen a) => Int -> Grid -> ReaderT Config.Config (Rand a) Grid
 advanceGridTicks 1 grid = advanceGridTick grid
 advanceGridTicks i grid = advanceGridTicks (i - 1) grid >>= advanceGridTick
 
-advanceGridTick :: (RandomGen a) => Grid -> Rand a Grid
-advanceGridTick = spreadFeatures Config.getFeatureConfigs
+advanceGridTick :: (RandomGen a) => Grid -> ReaderT Config.Config (Rand a) Grid
+advanceGridTick grid = do
+  featureConfigs <- ask
+  lift $ spreadFeatures featureConfigs grid
 
 spreadFeatures :: (RandomGen a) => [Config.FeatureConfig] -> Grid -> Rand a Grid
 spreadFeatures [] grid = return grid
@@ -68,7 +72,7 @@ shouldFeatureSpread :: (RandomGen g) => Config.FeatureConfig -> Tile -> [Tile] -
 shouldFeatureSpread featureConfig currentTile adjacentTiles = do
   p <- getRandom
   let currentTemp = temperature currentTile
-      (_, pSpread) = Config.pGrowth featureConfig
+      (_, pSpread) = Config.growth featureConfig
       (minTemp, maxTemp) = Config.temperature featureConfig
       spreadTerrain = (Config.terrain featureConfig)
       adjacentTile = any (\tile -> terrain tile == spreadTerrain) adjacentTiles

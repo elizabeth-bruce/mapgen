@@ -1,25 +1,46 @@
-module MapGen.Data.Config (FeatureConfig (..), getFeatureConfigs) where
+{-# LANGUAGE OverloadedStrings #-}
 
+module MapGen.Data.Config (getFeatureConfigRaw, parseFeatureConfig, Config, FeatureConfig (..)) where
+
+import Data.Aeson
+import Data.Aeson.Types (Parser)
+import qualified Data.ByteString.Lazy as B (ByteString, readFile)
+import Data.Text.Lazy (Text, fromStrict, unpack)
+import qualified Data.HashMap.Lazy as HML (lookup)
+import Control.Applicative (empty, pure)
 import MapGen.Models.Terrain ( Terrain (..))
 
-data FeatureConfig = FeatureConfig { terrain :: Terrain, temperature :: (Float, Float), height :: (Float, Float), pGrowth :: (Float, Float) }
+import Debug.Trace
 
-getForestConfig :: FeatureConfig
+type Config = [FeatureConfig]
 
-getForestConfig = FeatureConfig{
-  terrain=Forest,
-  temperature=(0.0, 30.0),
-  height=(0.0, 100.0),
-  pGrowth=(0.01, 0.05)
+data FeatureConfig = FeatureConfig {
+  terrain :: Terrain,
+  temperature :: (Float, Float),
+  height :: (Float, Float),
+  growth :: (Float, Float)
 }
 
-getAerieConfig = FeatureConfig{
-  terrain=Aerie,
-  temperature=(0.0, 50.0),
-  height=(250, 9000),
-  pGrowth=(0.01, 0.0)
-}
+instance FromJSON Terrain where
+    parseJSON (String s) =
+      let fromString :: String -> Parser Terrain
+          fromString "Aerie" = pure Aerie
+          fromString "Forest" = pure Forest
+          fromString _ = empty
+      in fromString $ unpack $ fromStrict s
 
-getFeatureConfigs :: [FeatureConfig]
+instance FromJSON FeatureConfig where
+  parseJSON = withObject "FeatureConfig" $ \v -> FeatureConfig
+    <$> v .: "terrain"
+    <*> v .: "temperature"
+    <*> v .: "height"
+    <*> v .: "growth"
 
-getFeatureConfigs = [getForestConfig, getAerieConfig]
+parseFeatureConfig :: B.ByteString -> Either String [FeatureConfig]
+parseFeatureConfig = eitherDecode
+
+configFilePath :: FilePath
+configFilePath = "config/features.json"
+
+getFeatureConfigRaw :: IO B.ByteString
+getFeatureConfigRaw = B.readFile configFilePath

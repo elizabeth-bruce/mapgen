@@ -1,6 +1,8 @@
 module MapGen.Data.GridBuilder (
   createGrid,
-  createGridWithForest
+  createGridWithFeatures,
+  seedGridWithFeatures,
+  seedGridWithFeature
 ) where
 
 import Debug.Trace (trace)
@@ -14,13 +16,15 @@ import Math.FFT (dct2N, dct3N)
 import System.Random (RandomGen, split, random)
 import Data.Random.Normal (normal, normals)
 import Control.Monad (liftM)
-import Control.Monad.Random (MonadRandom, Rand (..), Random (..), liftRand, getRandomR, getRandom)
+import Control.Monad.Random (MonadRandom, RandT, Rand (..), Random (..), liftRand, getRandomR, getRandom)
+import Control.Monad.Reader (ReaderT, ask, local)
+import Control.Monad.Trans.Class (lift)
 
 import MapGen.Models.Terrain (Terrain (..))
 import MapGen.Models.Tile (Tile (..))
 import MapGen.Models.Grid (Grid (..))
 
-import qualified MapGen.Data.Config as Config (FeatureConfig (..), getFeatureConfigs)
+import qualified MapGen.Data.Config as Config (Config, FeatureConfig (..))
 
 getNormal :: (RandomGen g, Random a, Floating a) => Rand g a
 getNormal = liftRand normal
@@ -97,7 +101,7 @@ seedTileWithFeature featureConfig tile = do
       h = height tile
       (tempMin, tempMax) = Config.temperature featureConfig
       (heightMin, heightMax) = Config.height featureConfig
-      (pSeed, _) = Config.pGrowth featureConfig
+      (pSeed, _) = Config.growth featureConfig
       destinationTerrain = Config.terrain featureConfig
       nextTile = if p < pSeed && temp > tempMin && temp < tempMax && h > heightMin && h < heightMax
                  then Tile{height=h, temperature=temp, terrain=destinationTerrain}
@@ -110,9 +114,10 @@ seedGridWithFeature featureConfig grid = do
   let bounds = Array.bounds grid
   return $ Array.listArray bounds elems
 
-seedGridWithFeatures :: (RandomGen g) => [Config.FeatureConfig] -> Grid -> Rand g Grid
-seedGridWithFeatures [] grid = return grid
-seedGridWithFeatures (feature:otherFeatures) grid = seedGridWithFeature feature grid >>= seedGridWithFeatures otherFeatures
+seedGridWithFeatures :: (RandomGen g) => Grid -> ReaderT Config.Config (Rand g) Grid
+seedGridWithFeatures grid = do
+  features <- ask
+  lift $ foldl (\currentGrid -> \feature -> currentGrid >>= seedGridWithFeature feature) (return grid) features
 
-createGridWithForest :: (RandomGen g) => Int -> Int -> Rand g Grid
-createGridWithForest width height = createGrid width height >>= seedGridWithFeatures Config.getFeatureConfigs
+createGridWithFeatures :: (RandomGen g) => Int -> Int -> ReaderT Config.Config (Rand g) Grid
+createGridWithFeatures width height = lift (createGrid width height) >>= seedGridWithFeatures

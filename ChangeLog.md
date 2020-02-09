@@ -1,5 +1,8 @@
 # Changelog for mapgen
 
+### 0.1.0.0
+ * Feature generation now uses an external JSON file for configuration, rather than a hardcoded source file.
+
 ### 0.0.5.0
 * Generating random maps will now produce aeries on the map in areas of high elevation.
 * Forest growth is now dependent on temperature of the area.
