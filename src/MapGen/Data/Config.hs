@@ -10,7 +10,7 @@ import qualified Data.HashMap.Lazy as HML (lookup)
 import Control.Applicative (empty, pure)
 import MapGen.Models.Terrain ( Terrain (..))
 
-import Debug.Trace
+import Text.Read (readEither)
 
 type Config = [FeatureConfig]
 
@@ -24,9 +24,10 @@ data FeatureConfig = FeatureConfig {
 instance FromJSON Terrain where
     parseJSON (String s) =
       let fromString :: String -> Parser Terrain
-          fromString "Aerie" = pure Aerie
-          fromString "Forest" = pure Forest
-          fromString _ = empty
+          fromString terrain =
+            let terrainResult = readEither terrain
+            in case terrainResult of Left _ -> empty
+                                     Right val -> pure val
       in fromString $ unpack $ fromStrict s
 
 instance FromJSON FeatureConfig where

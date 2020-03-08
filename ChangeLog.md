@@ -1,5 +1,8 @@
 # Changelog for mapgen
 
+### 0.1.0.1
+ * Minor code improvements in feature configuration management.
+
 ### 0.1.0.0
  * Feature generation now uses an external JSON file for configuration, rather than a hardcoded source file.
 
