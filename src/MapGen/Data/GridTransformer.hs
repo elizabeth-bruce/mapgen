@@ -42,7 +42,7 @@ spreadFeatureTile featureConfig grid gridVal@(coords, tile) = do
   spread <- shouldFeatureSpread featureConfig tile adjacentTiles
   let nextTile =
         if spread
-        then Tile{ height=height tile, temperature=temperature tile, terrain=nextTerrain }
+        then Tile{ height=height tile, temperature=temperature tile, terrain=nextTerrain, precipitation = precipitation tile }
         else tile
   return (coords, nextTile)
 

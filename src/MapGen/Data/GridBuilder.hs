@@ -1,13 +1,12 @@
 module MapGen.Data.GridBuilder (
   createGrid,
   createGridWithFeatures,
-  seedGridWithFeatures,
-  seedGridWithFeature
+  createHeightGrid
 ) where
 
 import Debug.Trace (trace)
 
-import qualified Data.Array.CArray as CArray (CArray (..), array, indices, elems, bounds, ixmapWithInd, ixmap, listArray)
+import qualified Data.Array.CArray as CArray (CArray (..), array, assocs, indices, elems, bounds, ixmapWithInd, ixmap, listArray)
 import qualified Data.Array as Array (Array (..), array, bounds, assocs, elems, listArray)
 
 import Control.Arrow (first)
@@ -35,17 +34,39 @@ getNormals = liftRand $ first normals . split
 type NoiseGrid = CArray.CArray (Int, Int) Float
 type HeightGrid = CArray.CArray (Int, Int) Float
 type TemperatureGrid = Array.Array (Int, Int) Float
+type PrecipitationGrid = Array.Array (Int, Int) Float
 
-createTemperatureGrid :: RandomGen g => Int -> Int -> Rand g TemperatureGrid
+createPrecipitationGrid :: HeightGrid -> PrecipitationGrid
+createPrecipitationGrid heightGrid =
+  let availPrecipitation :: Float -> ((Int, Int), Float) -> Float
+      availPrecipitation _ ((0, _), _) = 0
+      availPrecipitation current ((_, _), height) = if height < 0
+                                                    then current + 50.0
+                                                    else current - (height * 0.3)
+      availPrecipitationEntries = scanl availPrecipitation 0 $ CArray.assocs heightGrid
+      actualPrecipitation :: Float -> Float -> Float
+      actualPrecipitation height precip = minimum [if height <= 0 then 50 else height * 0.3, precip]
+      heightVals = CArray.elems heightGrid
+   in Array.listArray (CArray.bounds heightGrid) (zipWith actualPrecipitation availPrecipitationEntries heightVals)
 
-createTemperatureGrid width height = do
+getTemperatureValue :: Float -> Float -> ((Int, Int), Float) -> ((Int, Int), Float)
+getTemperatureValue tempOffset tempScale ((x, y), height) =
+  let tempOffsetStrength = 2.0
+      tempOffsetBase = 5.0
+      tempScaleStrength = 0.2
+      tempScaleBase = 0.2
+      tempBase = tempOffsetBase + (tempOffset * tempOffsetStrength) + (fromIntegral y * (tempScaleBase + tempScale * tempScaleStrength))
+      heightTempRate = -0.1
+      tempNew = tempBase + (maximum [height, 0] * heightTempRate)
+  in ((x, y), tempNew)
+
+createTemperatureGrid :: RandomGen g => HeightGrid -> Rand g TemperatureGrid
+createTemperatureGrid heightGrid = do
   tempOffset <- getRandom
   tempScale <- getRandom
-  let tempOffsetStrength = 2.0
-      tempScaleStrength = 2.0
-      bounds = ((0, 0), (width - 1, height - 1))
-      tempValues = [fromIntegral y * (tempScaleStrength * tempScale) + (tempOffset * tempOffsetStrength) | x <- [0..width - 1], y <- [0..height - 1]]
-  return $ Array.listArray bounds tempValues
+  -- TODO: Figure out a more elegant way to convert from CArray to Array
+  let temperatureGrid = Array.array (CArray.bounds heightGrid) $ (getTemperatureValue tempOffset tempScale) <$> (CArray.assocs heightGrid)
+  return temperatureGrid
 
 createNoiseGrid :: RandomGen g => Int -> Int -> Rand g NoiseGrid
 
@@ -78,33 +99,37 @@ transformHeightToTerrain height
   | height < 300 = Mountains
   | otherwise = Peaks
 
-createTile :: Float -> Float -> Tile
-createTile height temperature = Tile{
+createTile :: Float -> Float -> Float -> Tile
+createTile height temperature precipitation = Tile{
   height=height
   ,terrain=transformHeightToTerrain height
-  ,temperature=temperature
+  ,temperature=temperature,
+   precipitation=precipitation
 }
  
 createGrid :: RandomGen g => Int -> Int -> Rand g Grid
 createGrid width height = do
-  temperatureVals <- Array.elems <$> createTemperatureGrid width height
-  heightVals <- CArray.elems <$> createHeightGrid width height
+  heightGrid <- createHeightGrid width height
+  temperatureVals <- Array.elems <$> createTemperatureGrid heightGrid
+  let heightVals = CArray.elems heightGrid
+      precipitationVals = Array.elems (createPrecipitationGrid heightGrid)
   let bounds = ((0, 0), (width - 1, height - 1))
-      gridVals = zipWith createTile heightVals temperatureVals
+      gridVals = zipWith3 createTile heightVals temperatureVals precipitationVals
   return $ Array.listArray bounds gridVals
 
 seedTileWithFeature :: (RandomGen g) => Config.FeatureConfig -> Tile -> Rand g Tile
 
 seedTileWithFeature featureConfig tile = do
-  p <- getRandomR (0.0 :: Float, 1.0 :: Float)
+  p <- getRandom
   let temp = temperature tile
       h = height tile
+      precip = precipitation tile
       (tempMin, tempMax) = Config.temperature featureConfig
       (heightMin, heightMax) = Config.height featureConfig
       (pSeed, _) = Config.growth featureConfig
       destinationTerrain = Config.terrain featureConfig
       nextTile = if p < pSeed && temp > tempMin && temp < tempMax && h > heightMin && h < heightMax
-                 then Tile{height=h, temperature=temp, terrain=destinationTerrain}
+                 then Tile{height=h, temperature=temp, terrain=destinationTerrain, precipitation=precip}
                  else tile
   return nextTile
 

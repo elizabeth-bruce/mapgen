@@ -9,7 +9,7 @@ import Control.Monad.Reader (runReaderT)
 import MapGen.UseCases.CreateConsoleViewMap (createConsoleViewMap)
 import MapGen.Views.MapConsoleView (renderMap)
 import MapGen.Views.GridConsoleView (renderGrid)
-import MapGen.Views.TileConsoleView (renderTile)
+import MapGen.Views.TileConsoleView (renderTileTemperature, renderTileTerrain, renderTilePrecipitation)
 import MapGen.Data.MapBuilder (createMap)
 import MapGen.Data.GridBuilder (createGridWithFeatures)
 import MapGen.Data.GridTransformer (advanceGridTicks)
@@ -20,5 +20,5 @@ boundCreateConsoleViewMap :: (RandomGen g) => g -> Int -> Int -> Config -> Strin
 boundCreateConsoleViewMap gen width height config =
   let boundCreateMapRand = createGridWithFeatures width height >>= advanceGridTicks 10
       boundCreateMap = createMap $ evalRand (runReaderT boundCreateMapRand config) gen
-      boundConsoleView = renderMap $ renderGrid renderTile
+      boundConsoleView = renderMap $ renderGrid renderTilePrecipitation
   in createConsoleViewMap boundCreateMap boundConsoleView

@@ -5,7 +5,7 @@ module MapGen.Models.Tile (
 
 import MapGen.Models.Terrain (Terrain (..))
 
-data Tile = Tile { terrain :: Terrain, height:: Float, temperature :: Float } deriving (Show, Eq)
+data Tile = Tile { terrain :: Terrain, height:: Float, temperature :: Float, precipitation :: Float } deriving (Show, Eq)
 
 renderTile :: Tile -> String
 
