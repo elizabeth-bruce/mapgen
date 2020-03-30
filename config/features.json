@@ -1,12 +1,12 @@
 [
   {
-    "terrain": "Forest",
+    "name": "Forest",
     "temperature": [0, 50],
     "height": [0, 100],
     "growth": [0.01, 0.06]
   },
   {
-    "terrain": "Aerie",
+    "name": "Aerie",
     "temperature": [0, 50],
     "height": [250, 9000],
     "growth": [0.01, 0]

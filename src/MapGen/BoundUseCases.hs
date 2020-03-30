@@ -20,5 +20,5 @@ boundCreateConsoleViewMap :: (RandomGen g) => g -> Int -> Int -> Config -> Strin
 boundCreateConsoleViewMap gen width height config =
   let boundCreateMapRand = createGridWithFeatures width height >>= advanceGridTicks 10
       boundCreateMap = createMap $ evalRand (runReaderT boundCreateMapRand config) gen
-      boundConsoleView = renderMap $ renderGrid renderTilePrecipitation
+      boundConsoleView = renderMap $ renderGrid renderTileTerrain
   in createConsoleViewMap boundCreateMap boundConsoleView

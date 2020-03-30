@@ -19,11 +19,10 @@ import Control.Monad.Random (MonadRandom, RandT, Rand (..), Random (..), liftRan
 import Control.Monad.Reader (ReaderT, ask, local)
 import Control.Monad.Trans.Class (lift)
 
-import MapGen.Models.Terrain (Terrain (..))
-import MapGen.Models.Tile (Tile (..))
+import MapGen.Models.Tile (Tile (..), HeightType (..), TemperatureType (..), PrecipitationType (..))
 import MapGen.Models.Grid (Grid (..))
 
-import qualified MapGen.Data.Config as Config (Config, FeatureConfig (..))
+import qualified MapGen.Data.Config as Config (Config, FeatureConfig (..), toFeature)
 
 getNormal :: (RandomGen g, Random a, Floating a) => Rand g a
 getNormal = liftRand normal
@@ -42,10 +41,10 @@ createPrecipitationGrid heightGrid =
       availPrecipitation _ ((0, _), _) = 0
       availPrecipitation current ((_, _), height) = if height < 0
                                                     then current + 50.0
-                                                    else current - (height * 0.3)
+                                                    else current - (height * 2.0)
       availPrecipitationEntries = scanl availPrecipitation 0 $ CArray.assocs heightGrid
       actualPrecipitation :: Float -> Float -> Float
-      actualPrecipitation height precip = minimum [if height <= 0 then 50 else height * 0.3, precip]
+      actualPrecipitation height precip = minimum [if height <= 0 then 50 else height * 2.0, precip]
       heightVals = CArray.elems heightGrid
    in Array.listArray (CArray.bounds heightGrid) (zipWith actualPrecipitation availPrecipitationEntries heightVals)
 
@@ -90,21 +89,39 @@ iftNoiseGrid = dct3N [0,1]
 createHeightGrid :: RandomGen g => Int -> Int -> Rand g HeightGrid
 createHeightGrid = (((iftNoiseGrid . filterFTNoiseGrid . ftNoiseGrid) <$>) .) . createNoiseGrid
 
-transformHeightToTerrain :: Float -> Terrain
-transformHeightToTerrain height
-  | height < -50 = Ocean
-  | height < 0 = Shallows
+getHeightType :: Float -> HeightType
+getHeightType height
+  | height <= -50 = Ocean
+  | height <= 0 = Shallows
   | height < 100 = Plains
   | height < 200 = Hills
   | height < 300 = Mountains
   | otherwise = Peaks
 
-createTile :: Float -> Float -> Float -> Tile
+getTemperatureType :: Float -> TemperatureType
+getTemperatureType temp
+  | temp < 0 = Polar
+  | temp < 10 = Subpolar
+  | temp < 18.5 = Temperate
+  | temp < 25.0 = Subtropical
+  | otherwise = Tropical
+
+getPrecipitationType precip
+  | precip < 10 = Minimal
+  | precip < 30 = Low
+  | precip < 50 = Medium
+  | precip < 100 = High
+  | otherwise = Extreme
+
+
 createTile height temperature precipitation = Tile{
   height=height
-  ,terrain=transformHeightToTerrain height
-  ,temperature=temperature,
-   precipitation=precipitation
+  ,temperature=temperature
+  ,precipitation=precipitation
+  ,heightType=getHeightType height
+  ,temperatureType=getTemperatureType temperature
+  ,precipitationType=getPrecipitationType precipitation
+  ,feature=Nothing
 }
  
 createGrid :: RandomGen g => Int -> Int -> Rand g Grid
@@ -127,9 +144,9 @@ seedTileWithFeature featureConfig tile = do
       (tempMin, tempMax) = Config.temperature featureConfig
       (heightMin, heightMax) = Config.height featureConfig
       (pSeed, _) = Config.growth featureConfig
-      destinationTerrain = Config.terrain featureConfig
+      feature = Config.toFeature featureConfig
       nextTile = if p < pSeed && temp > tempMin && temp < tempMax && h > heightMin && h < heightMax
-                 then Tile{height=h, temperature=temp, terrain=destinationTerrain, precipitation=precip}
+                 then tile {feature=Just feature}
                  else tile
   return nextTile
 
