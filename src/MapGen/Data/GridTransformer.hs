@@ -31,8 +31,11 @@ spreadFeatures (feature:otherFeatures) grid = spreadFeature feature grid >>= spr
 spreadFeature :: (RandomGen a) => Config.FeatureConfig -> Grid -> Rand a Grid
 spreadFeature featureConfig grid = do
   let bounds = Array.bounds grid
+      (_, pSpread) = Config.growth featureConfig
   assocs <- mapM (spreadFeatureTile featureConfig grid) (Array.assocs grid)
-  return $ Array.array bounds assocs
+  return $ if (pSpread > 0) 
+           then Array.array bounds assocs
+           else grid
 
 spreadFeatureTile :: (RandomGen a) => Config.FeatureConfig -> Grid -> ((Int, Int), Tile) -> Rand a ((Int, Int), Tile)
 spreadFeatureTile featureConfig grid gridVal@(coords, tile) = do

@@ -4,10 +4,12 @@ module MapGen.Data.GridBuilder (
   createHeightGrid
 ) where
 
-import Debug.Trace (trace)
+import Debug.Trace
 
 import qualified Data.Array.CArray as CArray (CArray (..), array, assocs, indices, elems, bounds, ixmapWithInd, ixmap, listArray)
 import qualified Data.Array as Array (Array (..), array, bounds, assocs, elems, listArray)
+import Data.Ix (Ix)
+import Foreign.Storable (Storable)
 
 import Control.Arrow (first)
 
@@ -35,23 +37,30 @@ type HeightGrid = CArray.CArray (Int, Int) Float
 type TemperatureGrid = Array.Array (Int, Int) Float
 type PrecipitationGrid = Array.Array (Int, Int) Float
 
+swap (x,y) = (y,x)
+ 
+transposeGrid :: (Ix a, Ix b, Foreign.Storable.Storable e) => CArray.CArray (a,b) e -> CArray.CArray (b,a) e
+transposeGrid a = CArray.ixmap (swap l, swap u) swap a where 
+  (l,u) = CArray.bounds a
+
+availPrecipitation :: (Float, Float) -> ((Int, Int), Float) -> (Float, Float)
+availPrecipitation _ ((0, _), _) = (0, 0)
+availPrecipitation (available, _) ((_, _), height) =
+  let pAvail = minimum [available, maximum [45, height * 1]]
+  in if height <= 0
+    then (available + 50.0, 50)
+    else (available - pAvail, pAvail)
+
 createPrecipitationGrid :: HeightGrid -> PrecipitationGrid
 createPrecipitationGrid heightGrid =
-  let availPrecipitation :: Float -> ((Int, Int), Float) -> Float
-      availPrecipitation _ ((0, _), _) = 0
-      availPrecipitation current ((_, _), height) = if height < 0
-                                                    then current + 50.0
-                                                    else current - (height * 2.0)
-      availPrecipitationEntries = scanl availPrecipitation 0 $ CArray.assocs heightGrid
-      actualPrecipitation :: Float -> Float -> Float
-      actualPrecipitation height precip = minimum [if height <= 0 then 50 else height * 2.0, precip]
+  let availPrecipitationEntries = scanl availPrecipitation (0,0) $ CArray.assocs $ transposeGrid heightGrid
       heightVals = CArray.elems heightGrid
-   in Array.listArray (CArray.bounds heightGrid) (zipWith actualPrecipitation availPrecipitationEntries heightVals)
+   in Array.listArray (CArray.bounds heightGrid) $ map snd availPrecipitationEntries
 
 getTemperatureValue :: Float -> Float -> ((Int, Int), Float) -> ((Int, Int), Float)
 getTemperatureValue tempOffset tempScale ((x, y), height) =
   let tempOffsetStrength = 2.0
-      tempOffsetBase = 5.0
+      tempOffsetBase = 10
       tempScaleStrength = 0.2
       tempScaleBase = 0.2
       tempBase = tempOffsetBase + (tempOffset * tempOffsetStrength) + (fromIntegral y * (tempScaleBase + tempScale * tempScaleStrength))
