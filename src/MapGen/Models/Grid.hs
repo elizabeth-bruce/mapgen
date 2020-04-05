@@ -1,8 +1,12 @@
 module MapGen.Models.Grid (
- Grid (..)
+ Grid (..),
+ GridCoordinate,
+ GridEntry (..)
 ) where
 
-import Data.Array.IArray
+import Data.Array
 import MapGen.Models.Tile
 
-type Grid = Array (Int, Int) Tile
+type Grid a = Array (Int, Int) a
+type GridCoordinate = (Int, Int) 
+type GridEntry a = (GridCoordinate, a)

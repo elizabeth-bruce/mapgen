@@ -1,11 +1,16 @@
 module MapGen.Models.Tile (
-  Tile (..),
   HeightType (..),
   TemperatureType (..),
-  PrecipitationType (..)
+  PrecipitationType (..),
+  Tile (..),
+  createTile
 ) where
 
 import MapGen.Models.Feature (Feature (..))
+
+data HeightType = Ocean | Shallows | Plains | Hills | Mountains | Peaks deriving (Enum, Eq, Show, Ord, Bounded)
+data TemperatureType = Polar | Subpolar | Temperate | Subtropical | Tropical deriving (Enum, Eq, Show, Ord, Bounded)
+data PrecipitationType = Minimal | Low | Medium | High | Extreme deriving (Enum, Eq, Show, Ord, Bounded)
 
 data Tile = Tile {
   height :: Float
@@ -17,33 +22,39 @@ data Tile = Tile {
   , feature :: Maybe Feature
 } deriving (Show, Eq)
 
-data HeightType = Ocean | Shallows | Plains | Hills | Mountains | Peaks deriving (Enum, Eq, Show, Ord, Bounded)
-data TemperatureType = Polar | Subpolar | Temperate | Subtropical | Tropical deriving (Enum, Eq, Show, Ord, Bounded)
-data PrecipitationType = Minimal | Low | Medium | High | Extreme deriving (Enum, Eq, Show, Ord, Bounded)
-
 getHeightType :: Float -> HeightType
-getHeightType height
-  | height <= -50 = Ocean
-  | height <= 0 = Shallows
-  | height < 100 = Plains
-  | height < 200 = Hills
-  | height < 300 = Mountains
+getHeightType h
+  | h <= -50 = Ocean
+  | h <= 0 = Shallows
+  | h < 100 = Plains
+  | h < 200 = Hills
+  | h < 300 = Mountains
   | otherwise = Peaks
 
 getTemperatureType :: Float -> TemperatureType
-getTemperatureType temp
-  | temp < 0 = Polar
-  | temp < 10 = Subpolar
-  | temp < 18.5 = Temperate
-  | temp < 25.0 = Subtropical
+getTemperatureType t
+  | t < 0 = Polar
+  | t < 10 = Subpolar
+  | t < 18.5 = Temperate
+  | t < 25.0 = Subtropical
   | otherwise = Tropical
 
-getPrecipitationType precip
-  | precip < 10 = Minimal
-  | precip < 30 = Low
-  | precip < 50 = Medium
-  | precip < 100 = High
+getPrecipitationType p
+  | p < 10 = Minimal
+  | p < 30 = Low
+  | p < 50 = Medium
+  | p < 100 = High
   | otherwise = Extreme
+
+createTile h t p = Tile{
+  height=h
+  ,temperature=t
+  ,precipitation=p
+  ,heightType=getHeightType h
+  ,temperatureType=getTemperatureType t
+  ,precipitationType=getPrecipitationType p
+  ,feature=Nothing
+}
 
 getTileDescription :: Tile -> String
 getTileDescription = getTileDescriptionFromTerrainType

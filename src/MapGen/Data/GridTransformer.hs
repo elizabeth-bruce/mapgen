@@ -11,24 +11,25 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Reader (ReaderT, ask)
 
 import MapGen.Models.Tile (Tile (..))
-import MapGen.Models.Grid (Grid (..))
+import MapGen.Models.Grid (Grid (..), GridCoordinate, GridEntry (..))
 
 import qualified MapGen.Data.Config as Config (Config, FeatureConfig (..), toFeature)
 
-advanceGridTicks :: (RandomGen a) => Int -> Grid -> ReaderT Config.Config (Rand a) Grid
+
+advanceGridTicks :: (RandomGen a) => Int -> Grid Tile -> ReaderT Config.Config (Rand a) (Grid Tile)
 advanceGridTicks 1 grid = advanceGridTick grid
 advanceGridTicks i grid = advanceGridTicks (i - 1) grid >>= advanceGridTick
 
-advanceGridTick :: (RandomGen a) => Grid -> ReaderT Config.Config (Rand a) Grid
+advanceGridTick :: (RandomGen a) => Grid Tile -> ReaderT Config.Config (Rand a) (Grid Tile)
 advanceGridTick grid = do
   featureConfigs <- ask
   lift $ spreadFeatures featureConfigs grid
 
-spreadFeatures :: (RandomGen a) => [Config.FeatureConfig] -> Grid -> Rand a Grid
+spreadFeatures :: (RandomGen a) => [Config.FeatureConfig] -> Grid Tile -> Rand a (Grid Tile)
 spreadFeatures [] grid = return grid
 spreadFeatures (feature:otherFeatures) grid = spreadFeature feature grid >>= spreadFeatures otherFeatures
 
-spreadFeature :: (RandomGen a) => Config.FeatureConfig -> Grid -> Rand a Grid
+spreadFeature :: (RandomGen a) => Config.FeatureConfig -> Grid Tile -> Rand a (Grid Tile)
 spreadFeature featureConfig grid = do
   let bounds = Array.bounds grid
       (_, pSpread) = Config.growth featureConfig
@@ -37,7 +38,7 @@ spreadFeature featureConfig grid = do
            then Array.array bounds assocs
            else grid
 
-spreadFeatureTile :: (RandomGen a) => Config.FeatureConfig -> Grid -> ((Int, Int), Tile) -> Rand a ((Int, Int), Tile)
+spreadFeatureTile :: (RandomGen a) => Config.FeatureConfig -> Grid Tile -> GridEntry Tile -> Rand a (GridEntry Tile)
 spreadFeatureTile featureConfig grid gridVal@(coords, tile) = do
   let adjacentTiles = getAdjacentTiles grid gridVal
       feature = Config.toFeature featureConfig
@@ -48,7 +49,7 @@ spreadFeatureTile featureConfig grid gridVal@(coords, tile) = do
         else tile
   return (coords, nextTile)
 
-getAdjacentTiles :: Grid -> ((Int, Int), Tile) -> [Tile]
+getAdjacentTiles :: Grid Tile -> GridEntry Tile -> [Tile]
 
 getAdjacentTiles grid ((x, y), _) =
   let ((xMin, yMin), (xMax, yMax)) = Array.bounds grid

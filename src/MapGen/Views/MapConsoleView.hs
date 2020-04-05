@@ -4,7 +4,8 @@ module MapGen.Views.MapConsoleView (
 
 import MapGen.Models.Grid (Grid (..))
 import MapGen.Models.Map (Map (..))
+import MapGen.Models.Tile (Tile)
 
-renderMap :: (Grid -> String) -> Map -> String
+renderMap :: (Grid Tile -> String) -> Map -> String
 
 renderMap renderGrid Map{grid=grid} = renderGrid grid 

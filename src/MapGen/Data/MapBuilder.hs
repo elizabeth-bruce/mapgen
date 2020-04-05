@@ -4,7 +4,7 @@ module MapGen.Data.MapBuilder (
 
 import MapGen.Models.Map (Map (..))
 import MapGen.Models.Grid (Grid (..))
-
-createMap :: Grid -> Map
+import MapGen.Models.Tile (Tile (..))
+createMap :: Grid Tile -> Map
 
 createMap grid = Map { grid=grid }

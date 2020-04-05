@@ -9,7 +9,7 @@ import Data.List.Split (chunksOf)
 import MapGen.Models.Tile (Tile (..))
 import MapGen.Models.Grid (Grid (..))
 
-renderGrid :: (Tile -> String) -> Grid -> String
+renderGrid :: (Tile -> String) -> Grid Tile -> String
 
 renderGrid renderTile grid =
   let (_, (_, height)) = bounds grid
