@@ -18,6 +18,7 @@ type Config = [FeatureConfig]
 data FeatureConfig = FeatureConfig {
   name :: String
   ,temperature :: (Float, Float)
+  ,precipitation :: (Float, Float)
   ,height :: (Float, Float)
   ,growth :: (Float, Float)
 }
@@ -26,6 +27,7 @@ instance FromJSON FeatureConfig where
   parseJSON = withObject "FeatureConfig" $ \v -> FeatureConfig
     <$> v .: "name"
     <*> v .: "temperature"
+    <*> v .: "precipitation"
     <*> v .: "height"
     <*> v .: "growth"
 

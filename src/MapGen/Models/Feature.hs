@@ -4,4 +4,4 @@ module MapGen.Models.Feature (
 
 data Feature = Feature {
   name :: String
-} deriving (Show, Eq) 
+} deriving (Show, Eq, Ord)

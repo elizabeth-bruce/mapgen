@@ -35,6 +35,7 @@ dependencies:
 - mtl
 - transformers
 - bytestring
+- containers
 
 library:
   source-dirs: src

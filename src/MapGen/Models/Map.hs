@@ -5,4 +5,6 @@ module MapGen.Models.Map (
 import MapGen.Models.Grid (Grid (..))
 import MapGen.Models.Tile (Tile (..))
 
-newtype Map = Map { grid :: Grid Tile } deriving (Show, Eq)
+newtype Map = Map {
+  grid :: Grid Tile
+} deriving (Show, Eq)
