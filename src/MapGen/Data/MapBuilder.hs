@@ -1,7 +1,8 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
 module MapGen.Data.MapBuilder (
-  createMap
+  createMap,
+  createMapWithFeatures
 ) where
 
 import Control.Monad.Reader (ReaderT (..), ask)
@@ -23,9 +24,9 @@ import MapGen.Data.Config (Config(..), FeatureConfig (..), toFeature)
 
 type TileGrid = Grid Tile
 
-createMap :: TileGrid -> Map
+createMap :: TileGrid -> FeatureMap -> Map
 
-createMap grid = Map { grid=grid }
+createMap grid featureMap = Map {grid=grid, featureMap=featureMap}
 
 seedTileWithFeature :: FeatureConfig -> Tile -> Tile
 seedTileWithFeature fc t = t{feature=Just $ toFeature fc}
@@ -47,16 +48,16 @@ seedGridWithFeature fc ges g =
       updatedGridEntries = map updateGridEntry ges
   in g // updatedGridEntries
 
--- updateFeatureMap :: FeatureConfig -> [GridEntry Tile] -> FeatureMap -> FeatureMap
--- updateFeatureMap fc ges fm =
-
 seedMapWithFeature :: (RandomGen g) => FeatureConfig -> Map -> Rand g Map
-seedMapWithFeature fc Map{grid=g} = do
+seedMapWithFeature fc Map{grid=g, featureMap=fm} = do
   let candidateGridEntries = filter ((canFeatureGrow fc) . snd) (assocs g)
   gcVals <- (take $ length candidateGridEntries) <$> getRandoms
   let (pSeed, _) = growth fc
       seededGridEntries = map snd $ filter ((< pSeed) . fst) $ zip gcVals candidateGridEntries
-  return $ createMap $ seedGridWithFeature fc seededGridEntries g
+      seededGridCoordinates = map fst seededGridEntries
+      seededGrid = seedGridWithFeature fc seededGridEntries g
+      seededFeatureMap = addFeature (toFeature fc) seededGridCoordinates fm
+  return $ createMap seededGrid seededFeatureMap
 
 seedMapWithFeatures :: (RandomGen g) => [FeatureConfig] -> Map -> Rand g Map
 seedMapWithFeatures [] m = return m
@@ -67,5 +68,5 @@ seedMapWithFeatures fcs m =
 createMapWithFeatures :: (RandomGen g) => Int -> Int -> ReaderT Config (Rand g) Map
 createMapWithFeatures width height = do
   features <- ask
-  let m = createMap <$> createGrid width height
+  let m = createMap <$> createGrid width height <*> pure (createFeatureMap width height)
   lift $ m >>= seedMapWithFeatures features

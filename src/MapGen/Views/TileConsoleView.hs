@@ -7,8 +7,6 @@ module MapGen.Views.TileConsoleView (
 import MapGen.Models.Tile (Tile (..), HeightType (..), TemperatureType (..), PrecipitationType (..))
 import MapGen.Models.Feature(Feature (..))
 
-import Debug.Trace
-
 inRange :: Float -> Float -> Float -> Float
 inRange min max val = maximum [min, minimum [max, val]]
 
