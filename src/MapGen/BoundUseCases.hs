@@ -12,8 +12,6 @@ import MapGen.Views.GridConsoleView (renderGrid)
 import MapGen.Views.TileConsoleView (renderTileTemperature, renderTileTerrain, renderTilePrecipitation)
 import MapGen.Data.MapBuilder (createMapWithFeatures)
 import MapGen.Data.MapTransformer (advanceMapTicks)
-import MapGen.Data.GridBuilder (createGridWithFeatures)
-import MapGen.Data.GridTransformer (advanceGridTicks)
 import MapGen.Data.Config (Config)
 
 boundCreateConsoleViewMap :: (RandomGen g) => g -> Int -> Int -> Config -> String
