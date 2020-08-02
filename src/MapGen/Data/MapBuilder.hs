@@ -2,7 +2,8 @@
 
 module MapGen.Data.MapBuilder (
   createMap,
-  createMapWithFeatures
+  createMapWithFeatures,
+  canFeatureGrow
 ) where
 
 import Control.Monad.Reader (ReaderT (..), ask)

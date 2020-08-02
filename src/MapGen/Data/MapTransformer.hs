@@ -19,7 +19,7 @@ import MapGen.Models.Map (Map (..))
 import MapGen.Models.Grid (Grid (..), GridCoordinate, GridEntry)
 import MapGen.Models.Tile (Tile (..))
 
-import MapGen.Data.GridBuilder(createGrid)
+import MapGen.Data.MapBuilder (canFeatureGrow)
 import MapGen.Data.Config (Config(..), FeatureConfig (..), toFeature)
 
 advanceMapTicks :: (RandomGen g) => Int -> Map -> ReaderT Config.Config (Rand g) Map
@@ -33,15 +33,23 @@ advanceMapTick m = do
 
 updateFeature :: (RandomGen g) => FeatureConfig -> Map -> Rand g Map
 updateFeature fc Map{featureMap=fm, grid=g} = do
-  nextGridCoordinates <- getNextGridCoordinates fc fm
+  nextPotentialGridCoordinates <- getNextPotentialGridCoordinates fc fm
+  let nextGridCoordinates = filterNextGridCoordinatesByTile fc g nextPotentialGridCoordinates
   let feature = toFeature fc
   let updatedFeatureMap = foldl (\cfm gc -> addCoordinateToFeature feature gc cfm) fm nextGridCoordinates
   let updatedTiles = getUpdatedTiles g feature nextGridCoordinates
   let updatedGrid = g // updatedTiles
   return Map{grid=updatedGrid, featureMap=updatedFeatureMap}
 
-getNextGridCoordinates :: (RandomGen g) => FeatureConfig -> FeatureMap -> Rand g [GridCoordinate]
-getNextGridCoordinates fc (fcm, _, ((xMin, yMin), (xMax, yMax))) = do
+filterNextGridCoordinatesByTile :: FeatureConfig -> Grid Tile -> [GridCoordinate] -> [GridCoordinate]
+filterNextGridCoordinatesByTile fc g gcs =
+  let nextPotentialGridCoordinatesWithTiles = zip gcs $ map (g !) gcs
+      nextGridCoordinatesWithTiles = filter (canFeatureGrow fc . snd) nextPotentialGridCoordinatesWithTiles
+      nextGridCoordinates = map fst nextGridCoordinatesWithTiles
+  in nextGridCoordinates
+
+getNextPotentialGridCoordinates :: (RandomGen g) => FeatureConfig -> FeatureMap -> Rand g [GridCoordinate]
+getNextPotentialGridCoordinates fc (fcm, _, ((xMin, yMin), (xMax, yMax))) = do
   let gcs = case getCoordinatesFromFeatureCoordinateMap (toFeature fc) fcm of
                  Just set -> S.elems set
                  Nothing -> []
@@ -52,8 +60,8 @@ getNextGridCoordinates fc (fcm, _, ((xMin, yMin), (xMax, yMax))) = do
   let truncatedRandVals = take (length filteredAdjacentGcs) randVals
   let gcsWithRandVals = zip filteredAdjacentGcs truncatedRandVals
 
-  let filteredGcs = filter (\(_, v) -> v < snd (growth fc)) gcsWithRandVals
-  return $ map fst filteredGcs
+  let filteredRandGcs = map fst $ filter (\(_, v) -> v < snd (growth fc)) gcsWithRandVals
+  return filteredRandGcs
 
 getUpdatedTiles :: Grid Tile -> Feature -> [GridCoordinate] -> [GridEntry Tile]
 getUpdatedTiles g f gcs =

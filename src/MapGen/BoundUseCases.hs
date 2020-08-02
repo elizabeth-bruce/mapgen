@@ -17,6 +17,6 @@ import MapGen.Data.Config (Config)
 boundCreateConsoleViewMap :: (RandomGen g) => g -> Int -> Int -> Config -> String
 
 boundCreateConsoleViewMap gen width height config =
-  let boundCreateMap = evalRand (runReaderT (createMapWithFeatures width height >>= advanceMapTicks 30) config) gen
+  let boundCreateMap = evalRand (runReaderT (createMapWithFeatures width height >>= advanceMapTicks 250) config) gen
       boundConsoleView = renderMap $ renderGrid renderTileTerrain
   in createConsoleViewMap boundCreateMap boundConsoleView
