@@ -1,10 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module MapGen.Data.Config (
-  getFeatureConfigRaw 
-  ,parseFeatureConfig 
-  ,Config
+  getConfigRaw
+  ,parseConfig
+  ,Config (..)
   ,FeatureConfig (..)
+  ,MapConfig (..)
   ,toFeature
 ) where
 
@@ -13,7 +15,27 @@ import Data.Aeson.Types (Parser)
 import qualified Data.ByteString.Lazy as B (ByteString, readFile)
 import qualified MapGen.Models.Feature as Feature (Feature (..))
 
-type Config = [FeatureConfig]
+data Config = Config {
+  mapConfig :: MapConfig,
+  featureConfig :: [FeatureConfig]
+}
+
+instance FromJSON Config where
+  parseJSON = withObject "Config" $ \v -> Config
+    <$> v .: "mapConfig"
+    <*> v .: "featureConfig"
+
+data MapConfig = MapConfig {
+  age :: Int
+  ,width :: Int
+  ,height :: Int
+}
+
+instance FromJSON MapConfig where
+  parseJSON = withObject "MapConfig" $ \v -> MapConfig
+    <$> v .: "age"
+    <*> v .: "width"
+    <*> v .: "height"
 
 data FeatureConfig = FeatureConfig {
   name :: String
@@ -34,11 +56,11 @@ instance FromJSON FeatureConfig where
 toFeature :: FeatureConfig -> Feature.Feature
 toFeature FeatureConfig{name=name} = Feature.Feature name
 
-parseFeatureConfig :: B.ByteString -> Either String [FeatureConfig]
-parseFeatureConfig = eitherDecode
+parseConfig :: B.ByteString -> Either String Config
+parseConfig = eitherDecode
 
 configFilePath :: FilePath
-configFilePath = "config/features.json"
+configFilePath = "config/config.json"
 
-getFeatureConfigRaw :: IO B.ByteString
-getFeatureConfigRaw = B.readFile configFilePath
+getConfigRaw :: IO B.ByteString
+getConfigRaw = B.readFile configFilePath

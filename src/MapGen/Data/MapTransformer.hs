@@ -28,7 +28,8 @@ advanceMapTicks t m = advanceMapTick m >>= (advanceMapTicks $ t - 1)
 
 advanceMapTick :: (RandomGen g) => Map -> ReaderT Config.Config (Rand g) Map
 advanceMapTick m = do
-  featureConfigs <- ask
+  config <- ask
+  let featureConfigs = featureConfig config
   lift $ foldl (\cm fc -> cm >>= updateFeature fc) (return m) featureConfigs
 
 updateFeature :: (RandomGen g) => FeatureConfig -> Map -> Rand g Map

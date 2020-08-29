@@ -6,7 +6,7 @@ module MapGen.Data.MapBuilder (
   canFeatureGrow
 ) where
 
-import Control.Monad.Reader (ReaderT (..), ask)
+import Control.Monad.Reader (ReaderT (..), ask, liftM)
 import Control.Monad.Random (liftRand, Rand (..), Random (..), getRandoms)
 import Control.Monad.Trans (lift)
 import System.Random (RandomGen)
@@ -68,6 +68,7 @@ seedMapWithFeatures fcs m =
 
 createMapWithFeatures :: (RandomGen g) => Int -> Int -> ReaderT Config (Rand g) Map
 createMapWithFeatures width height = do
-  features <- ask
+  config <- ask
+  let features = featureConfig config
   let m = createMap <$> createGrid width height <*> pure (createFeatureMap width height)
   lift $ m >>= seedMapWithFeatures features
