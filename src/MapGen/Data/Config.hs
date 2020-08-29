@@ -29,6 +29,8 @@ data MapConfig = MapConfig {
   age :: Int
   ,width :: Int
   ,height :: Int
+  ,roughness :: Float
+  ,frequency :: FrequencyConfig 
 }
 
 instance FromJSON MapConfig where
@@ -36,6 +38,21 @@ instance FromJSON MapConfig where
     <$> v .: "age"
     <*> v .: "width"
     <*> v .: "height"
+    <*> v .: "roughness"
+    <*> v .: "frequency"
+
+data FrequencyConfig = FrequencyConfig {
+    decayX :: Float
+    ,decayY :: Float
+    ,decayXY :: Float
+}
+
+instance FromJSON FrequencyConfig where {
+  parseJSON = withObject "FrequencyConfig" $ \v ->FrequencyConfig
+    <$> v .: "decayX"
+    <*> v .: "decayY"
+    <*> v .: "decayXY"
+}
 
 data FeatureConfig = FeatureConfig {
   name :: String

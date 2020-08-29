@@ -2,7 +2,13 @@
   "mapConfig": {
     "age": 30,
     "width": 265,
-    "height": 65
+    "height": 65,
+    "roughness": 0.15,
+    "frequency": {
+        "decayX": 3.0,
+	"decayY": 3.0,
+	"decayXY": 0.5
+    }
   },
   "featureConfig": [
     {

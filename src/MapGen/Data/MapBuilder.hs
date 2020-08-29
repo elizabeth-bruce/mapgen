@@ -70,5 +70,5 @@ createMapWithFeatures :: (RandomGen g) => Int -> Int -> ReaderT Config (Rand g) 
 createMapWithFeatures width height = do
   config <- ask
   let features = featureConfig config
-  let m = createMap <$> createGrid width height <*> pure (createFeatureMap width height)
+  let m = createMap <$> createGrid (mapConfig config) <*> pure (createFeatureMap width height)
   lift $ m >>= seedMapWithFeatures features
