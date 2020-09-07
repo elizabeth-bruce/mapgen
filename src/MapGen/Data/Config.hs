@@ -7,6 +7,7 @@ module MapGen.Data.Config (
   ,Config (..)
   ,FeatureConfig (..)
   ,MapConfig (..)
+  ,FrequencyConfig (..)
   ,toFeature
 ) where
 

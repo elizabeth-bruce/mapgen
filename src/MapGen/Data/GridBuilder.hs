@@ -25,7 +25,7 @@ type TileGrid = Grid Tile
 
 createGrid :: RandomGen g => MapConfig -> Rand g TileGrid
 createGrid mc@Config.MapConfig{height=height, width=width} = do
-  heightGrid <- createHeightGrid width height
+  heightGrid <- createHeightGrid mc
   temperatureVals <- elems <$> createTemperatureGrid heightGrid
   let heightVals = elems heightGrid
       precipitationVals = elems (createPrecipitationGrid heightGrid)
