@@ -7,7 +7,7 @@
     "frequency": {
         "decayX": 3.0,
 	"decayY": 3.0,
-	"decayXY": 0.5
+	"decayXY": 0.50
     }
   },
   "featureConfig": [
