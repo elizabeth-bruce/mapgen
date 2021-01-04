@@ -2,7 +2,9 @@
 
 module MapGen.BoundUseCases (
   boundCreateConsoleViewMap,
-  boundCreateJsonViewMap
+  boundCreateJsonViewMap,
+  createMap,
+  Map (..)
 ) where
 
 import qualified Data.ByteString.Lazy as B (ByteString (..))
@@ -29,7 +31,6 @@ import MapGen.Views.TileJsonView as TJV (renderTile)
 import MapGen.Data.MapBuilder (createMapWithFeatures)
 import MapGen.Data.MapTransformer (advanceMapTicks)
 import MapGen.Data.Config (Config (..), MapConfig (..))
-
 
 createMap :: (RandomGen g) => ReaderT Config (Rand g) Map
 createMap = do
